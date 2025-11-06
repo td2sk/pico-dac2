@@ -8,6 +8,7 @@ Raspberry Pi Pico を USB DAC（Digital-to-Analog Converter）として機能さ
 
 - **USB Audio Class 2.0 対応:**
   - ドライバーのインストールなしで多くの OS（Windows, macOS, Linux）で動作します。
+  - Feedback Endpoint によるフロー制御に対応
 - **ハイレゾ対応:**
   - **サンプリング周波数:** 44.1kHz, 48kHz, 88.2kHz, 96kHz
   - **量子化ビット数:** 16bit, 24bit, 32bit
@@ -92,6 +93,7 @@ set (PICODAC_I2S_BASE_CLOCK_PIN 20 CACHE STRING "I2S Base Clock Pin. LRCLK is BA
 
 ## TODO
 
+- [ ] ドキュメントの整備
 - [ ] HID によるカスタム制御
 - [ ] HID によるデバッグ/統計情報の取得
 - [ ] USB プロトコルスタックを独立したライブラリ化

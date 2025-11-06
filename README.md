@@ -8,6 +8,7 @@ This project provides firmware to enable the Raspberry Pi Pico as a USB DAC (Dig
 
 - **USB Audio Class 2.0 Compliant:**
   - Works on many operating systems (Windows, macOS, Linux) without requiring driver installation.
+  - Supports flow control via the Feedback Endpoint.
 - **High-Resolution Audio Support:**
   - **Sampling Rates:** 44.1kHz, 48kHz, 88.2kHz, 96kHz
   - **Bit Depths:** 16bit, 24bit, 32bit
@@ -92,6 +93,7 @@ The Vendor ID and Product ID can be configured in `CMakeLists.txt`.
 
 ## TODO
 
+- [ ] Enhance the documentation
 - [ ] Custom control via HID
 - [ ] Debugging/statistics acquisition via HID
 - [ ] Refactor USB protocol stack into an independent library
