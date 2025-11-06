@@ -1,0 +1,136 @@
+.program i2s_stereo_16bit
+.side_set 2
+                    ;        /--- LRCLK
+                    ;        |/-- BCLK
+.wrap_target        ;        ||
+  out null, 16        side 0b01
+L0:
+  out pins, 1         side 0b00
+  set x, 13           side 0b01
+L1:
+  out pins, 1         side 0b00
+  jmp x--, L1         side 0b01
+L15:
+  out pins, 1         side 0b10
+  out null, 16        side 0b11
+
+R0:
+  out pins, 1         side 0b10
+  set x, 13           side 0b11
+R1:
+  out pins, 1         side 0b10
+  jmp x--, R1         side 0b11
+R15:
+  out pins, 1         side 0b00
+.wrap
+
+
+.program i2s_stereo_24bit
+.side_set 2
+                    ;        /--- LRCLK
+                    ;        |/-- BCLK
+.wrap_target        ;        ||
+  out null, 8         side 0b01
+L0:
+  out pins, 1         side 0b00
+  set x, 21           side 0b01
+L1:
+  out pins, 1         side 0b00
+  jmp x--, L1         side 0b01
+L23:
+  out pins, 1         side 0b10
+  out null, 8         side 0b11
+
+R0:
+  out pins, 1         side 0b10
+  set x, 21           side 0b11
+R1:
+  out pins, 1         side 0b10
+  jmp x--, R1         side 0b11
+R23:
+  out pins, 1         side 0b00
+.wrap
+
+
+.program i2s_stereo_32bit
+.side_set 2
+                    ;        /--- LRCLK
+                    ;        |/-- BCLK
+.wrap_target        ;        ||
+  nop                 side 0b01
+L0:
+  out pins, 1         side 0b00
+  set x, 29           side 0b01
+L1:
+  out pins, 1         side 0b00
+  jmp x--, L1         side 0b01
+L23:
+  out pins, 1         side 0b10
+  nop                 side 0b11
+
+R0:
+  out pins, 1         side 0b10
+  set x, 29           side 0b11
+R1:
+  out pins, 1         side 0b10
+  jmp x--, R1         side 0b11
+R23:
+  out pins, 1         side 0b00
+.wrap
+
+
+% c-sdk {
+#include "hardware/clocks.h"
+#include "i2s.h" // For i2s_config_t
+
+static inline void i2s_program_init_common(PIO pio, uint sm, uint offset, const i2s_config_t *config, pio_sm_config* sm_config) {
+    pio_gpio_init(pio, config->data_pin);
+    pio_gpio_init(pio, config->clock_pin_base);
+    pio_gpio_init(pio, config->clock_pin_base + 1);
+
+    sm_config_set_out_pins(sm_config, config->data_pin, 1);
+    sm_config_set_sideset_pins(sm_config, config->clock_pin_base);
+    sm_config_set_out_shift(sm_config, false, true, 32);
+    sm_config_set_fifo_join(sm_config, PIO_FIFO_JOIN_TX);
+
+    pio_sm_init(pio, sm, offset, sm_config);
+
+    uint32_t pin_mask = (1u << config->data_pin) | (3u << config->clock_pin_base);
+    pio_sm_set_pindirs_with_mask(pio, sm, pin_mask, pin_mask);
+    pio_sm_set_pins(pio, sm, 0);
+}
+
+static inline void i2s_16bit_program_init(PIO pio, uint sm, uint offset, const i2s_config_t *config) {
+    pio_sm_config sm_config = i2s_stereo_16bit_program_get_default_config(offset);
+
+    // For 16-bit stereo , we need 64 PIO cycles per frame.
+    // 64cycles = 16bit * 2ch * 2cycles/bit
+    float clk_div = (float)clock_get_hz(clk_sys) / (config->sample_rate * 64);
+    sm_config_set_clkdiv(&sm_config, clk_div);
+
+    i2s_program_init_common(pio, sm, offset, config, &sm_config);
+}
+
+static inline void i2s_24bit_program_init(PIO pio, uint sm, uint offset, const i2s_config_t *config) {
+    pio_sm_config sm_config = i2s_stereo_24bit_program_get_default_config(offset);
+
+    // For 24-bit stereo, we need 96 PIO cycles per frame.
+    // 96cycles = 24bit * 2ch * 2cycles/bit
+    float clk_div = (float)clock_get_hz(clk_sys) / (config->sample_rate * 96);
+    sm_config_set_clkdiv(&sm_config, clk_div);
+
+    i2s_program_init_common(pio, sm, offset, config, &sm_config);
+}
+
+static inline void i2s_32bit_program_init(PIO pio, uint sm, uint offset, const i2s_config_t *config) {
+    pio_sm_config sm_config = i2s_stereo_32bit_program_get_default_config(offset);
+
+    // For 32-bit stereo, we need 128 PIO cycles per frame.
+    // 128cycles = 32bit * 2ch * 2cycles/bit
+    float clk_div = (float)clock_get_hz(clk_sys) / (config->sample_rate * 128);
+    sm_config_set_clkdiv(&sm_config, clk_div);
+
+    i2s_program_init_common(pio, sm, offset, config, &sm_config);
+}
+
+%}

@@ -1,0 +1,64 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+.program blink
+    pull block
+    mov x, osr
+
+.wrap_target
+    mov y, x
+    set pins, 1
+on_loop:
+    jmp y--, on_loop
+
+    mov y, x
+    set pins, 0
+off_loop:
+    jmp y--, off_loop
+
+    pull noblock
+    mov x, osr
+.wrap
+
+
+% c-sdk {
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+/**
+ * @brief Calculates the PIO clock divider to achieve a 1MHz clock, where 1 cycle = 1 microsecond.
+ */
+static inline float blink_get_clkdiv() {
+    return (float)clock_get_hz(clk_sys) / 1000000.0f;
+}
+
+/**
+ * @brief Initializes the PIO state machine for the blink program.
+ * 
+ * This function configures the GPIO, sets the pin direction, and sets up the
+ * state machine with a clock divider calculated to make 1 PIO cycle = 1 microsecond.
+ */
+static inline void blink_program_init(PIO pio, uint sm, uint offset, uint pin) {
+   pio_gpio_init(pio, pin);
+   pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+   pio_sm_config c = blink_program_get_default_config(offset);
+   sm_config_set_set_pins(&c, pin, 1);
+   pio_sm_init(pio, sm, offset, &c);
+}
+
+/**
+ * @brief Cleans up the PIO state, stops the state machine, and sets the output pin to low.
+ */
+static inline void blink_program_deinit(PIO pio, uint sm, uint pin) {
+    pio_sm_set_enabled(pio, sm, false);
+    // Set pin to low by switching back to SIO function
+    gpio_set_function(pin, GPIO_FUNC_SIO);
+    gpio_put(pin, 0);
+}
+
+
+
+%}
